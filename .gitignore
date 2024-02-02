@@ -1,5 +1,7 @@
-# Not useful for GitHub
+key.json
 *test*
+
+# Environments
 .llm_project
 
 # Byte-compiled / optimized / DLL files

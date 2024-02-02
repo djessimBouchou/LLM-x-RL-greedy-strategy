@@ -11,6 +11,7 @@ import torch.optim as optim
 from IPython.display import clear_output
 
 
+
 class ReplayBuffer:
     """A simple numpy replay buffer."""
 
@@ -362,6 +363,7 @@ class DQNAgent:
 
         ### TO MODIFY ###
         # For the moment just random
+
         for _ in range(self.nb_actions_selected_by_LLM):
             selected_action = env.action_space.sample()
             self.LLM_next_selected_actions.append(selected_action)
