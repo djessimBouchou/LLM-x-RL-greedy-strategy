@@ -75,7 +75,7 @@ class CnnNetwork(nn.Module):
         """Initialization."""
         super(CnnNetwork, self).__init__()
 
-        dim_flatter = 0
+        dim_flatter = 33856 # To change and calculate automatically
 
         self.layers = nn.Sequential(
             nn.Conv2d(in_channels, 16, kernel_size=(2, 2), stride = 1), 
@@ -84,7 +84,7 @@ class CnnNetwork(nn.Module):
             nn.Conv2d(16, 16, kernel_size=(2, 2), stride = 1),  
             nn.ReLU(), 
             nn.Flatten(),
-            nn.Linear(33856, out_dim)
+            nn.Linear(dim_flatter, out_dim)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
