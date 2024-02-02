@@ -1,0 +1,10 @@
+gymnasium==0.29.1
+ipython==8.21.0
+matplotlib==3.8.2
+numpy==1.26.3
+openai==1.10.0
+torch==2.2.0
+swig
+gymnasium[box2d]
+gymnasium[accept-rom-license]
+gymnasium[atari]
