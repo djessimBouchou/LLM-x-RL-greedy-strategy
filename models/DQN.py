@@ -14,9 +14,9 @@ from IPython.display import clear_output
 class ReplayBuffer:
     """A simple numpy replay buffer."""
 
-    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
-        self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
-        self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
+    def __init__(self, obs_dim, size: int, batch_size: int = 32):
+        self.obs_buf = np.zeros([size, *obs_dim], dtype=np.float32)
+        self.next_obs_buf = np.zeros([size, *obs_dim], dtype=np.float32)
         self.acts_buf = np.zeros([size], dtype=np.float32)
         self.rews_buf = np.zeros([size], dtype=np.float32)
         self.done_buf = np.zeros(size, dtype=np.float32)
@@ -51,10 +51,10 @@ class ReplayBuffer:
         return self.size
     
 
-class Network(nn.Module):
+class MlpNetwork(nn.Module):
     def __init__(self, in_dim: int, out_dim: int):
         """Initialization."""
-        super(Network, self).__init__()
+        super(MlpNetwork, self).__init__()
 
         self.layers = nn.Sequential(
             nn.Linear(in_dim, 128), 
@@ -67,6 +67,32 @@ class Network(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
         return self.layers(x)
+    
+
+class CnnNetwork(nn.Module):
+    def __init__(self, in_channels: int, out_dim: int):
+        """Initialization."""
+        super(CnnNetwork, self).__init__()
+
+        dim_flatter = 0
+
+        self.layers = nn.Sequential(
+            nn.Conv2d(in_channels, 16, kernel_size=(2, 2), stride = 1), 
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(16, 16, kernel_size=(2, 2), stride = 1),  
+            nn.ReLU(), 
+            nn.Flatten(),
+            nn.Linear(33856, out_dim)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method implementation."""
+        if len(x.shape) == 3:
+            x = x[None, ...]
+        x = x.permute([0, 3, 1, 2])
+        out = self.layers(x)
+        return out
     
 
 
@@ -92,6 +118,7 @@ class DQNAgent:
 
     def __init__(
         self, 
+        network_type: str,
         env: gym.Env,
         memory_size: int,
         batch_size: int,
@@ -106,6 +133,7 @@ class DQNAgent:
         """Initialization.
         
         Args:
+            network_type (str): "Cnn" or "Mlp"
             env (gym.Env): openAI Gym environment
             memory_size (int): length of memory
             batch_size (int): batch size for sampling
@@ -116,9 +144,12 @@ class DQNAgent:
             min_epsilon (float): min value of epsilon
             gamma (float): discount factor
         """
-        obs_dim = env.observation_space.shape[0]
+
+        assert network_type in ["Cnn", "Mlp"]
+        self.network_type = network_type
+
+        obs_dim = env.observation_space.shape
         action_dim = env.action_space.n
-        
         self.env = env
         self.memory = ReplayBuffer(obs_dim, memory_size, batch_size)
         self.batch_size = batch_size
@@ -142,8 +173,12 @@ class DQNAgent:
         print(self.device)
 
         # networks: dqn, dqn_target
-        self.dqn = Network(obs_dim, action_dim).to(self.device)
-        self.dqn_target = Network(obs_dim, action_dim).to(self.device)
+        if self.network_type == "Mlp" :
+            self.dqn = MlpNetwork(obs_dim, action_dim).to(self.device)
+            self.dqn_target = MlpNetwork(obs_dim, action_dim).to(self.device)
+        elif self.network_type == "Cnn" :
+            self.dqn = CnnNetwork(obs_dim[-1], action_dim).to(self.device)
+            self.dqn_target = CnnNetwork(obs_dim[-1], action_dim).to(self.device)
         self.dqn_target.load_state_dict(self.dqn.state_dict())
         self.dqn_target.eval()
         
@@ -332,3 +367,13 @@ class DQNAgent:
             self.LLM_next_selected_actions.append(selected_action)
 
         return self.LLM_next_selected_actions.pop(0)
+    
+
+if __name__ == "__main__":
+
+    env = gym.make("CarRacing-v2", max_episode_steps=200, render_mode="rgb_array", continuous = False)
+    agent = DQNAgent(network_type="Cnn", env = env, memory_size=100000, batch_size=32, target_update=100, LLM_epsilon_decay = 1/2000, seed = 42, max_LLM_epsilon=0.1)
+    obs, _ = env.reset()
+    for _ in range(10):
+        action = agent.select_action(obs)
+        print(action)
