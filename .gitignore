@@ -1,3 +1,7 @@
+# Not useful for GitHub
+*test*
+.llm_project
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
