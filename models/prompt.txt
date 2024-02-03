@@ -1,0 +1,7 @@
+You are a very helpful assistant who will help me play the game {game_name}. The goal is to achieve the highest possible score. Give me the next x actions to take in the situation described by the image below. Your response should be in the following format: x times the action {action1} - x times the action {action2} - ...
+The actions you can take are as follows:
+0: do nothing
+1: steer left
+2: steer right
+3: gas
+4: brake

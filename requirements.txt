@@ -8,3 +8,4 @@ swig
 gymnasium[box2d]
 gymnasium[accept-rom-license]
 gymnasium[atari]
+google.generativeai

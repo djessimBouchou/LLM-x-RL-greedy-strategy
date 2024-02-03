@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from IPython.display import clear_output
+from models.API_Gemini import API_Session
 
 
 
@@ -124,12 +125,14 @@ class DQNAgent:
         memory_size: int,
         batch_size: int,
         target_update: int,
-        LLM_epsilon_decay: float,
-        seed: int,
+        api_key_path: str,
+        LLM_epsilon_decay: float = 0.9,
+        seed: int = 42,
         max_LLM_epsilon: float = 1.0,
         min_LLM_epsilon: float = 0.1,
         gamma: float = 0.99,
         nb_actions_LLM: int = 10,
+        
     ):
         """Initialization.
         
@@ -148,6 +151,8 @@ class DQNAgent:
 
         assert network_type in ["Cnn", "Mlp"]
         self.network_type = network_type
+
+        self.llm_model = API_Session(api_key_path)
 
         obs_dim = env.observation_space.shape
         action_dim = env.action_space.n
@@ -363,9 +368,10 @@ class DQNAgent:
 
         ### TO MODIFY ###
         # For the moment just random
-
+        prompt = "You are a useful assistant and "
         for _ in range(self.nb_actions_selected_by_LLM):
-            selected_action = env.action_space.sample()
+            
+            selected_action = self.llm_model.send()
             self.LLM_next_selected_actions.append(selected_action)
 
         return self.LLM_next_selected_actions.pop(0)
