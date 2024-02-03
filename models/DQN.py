@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from IPython.display import clear_output
-from models.API_Gemini import API_Session
+from API_Gemini import API_Gemini
 
 
 
@@ -132,6 +132,8 @@ class DQNAgent:
         min_LLM_epsilon: float = 0.1,
         gamma: float = 0.99,
         nb_actions_LLM: int = 10,
+        description_game: str = "This is a game",
+        dict_action: dict = {},
         
     ):
         """Initialization.
@@ -152,8 +154,6 @@ class DQNAgent:
         assert network_type in ["Cnn", "Mlp"]
         self.network_type = network_type
 
-        self.llm_model = API_Session(api_key_path)
-
         obs_dim = env.observation_space.shape
         action_dim = env.action_space.n
         self.env = env
@@ -168,6 +168,8 @@ class DQNAgent:
         self.gamma = gamma
         self.LLM_next_selected_actions = list()
         self.nb_actions_selected_by_LLM = nb_actions_LLM
+        self.description_game = description_game
+        self.dict_action = dict_action
         
         # device: cpu / gpu / mps
         if torch.cuda.is_available():
@@ -196,6 +198,9 @@ class DQNAgent:
         
         # mode: train / test
         self.is_test = False
+
+        # API LLM
+        self.api_llm = API_Gemini(key_path = "key.json", dict_action = self.dict_action, description_game = self.description_game)
 
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
@@ -360,19 +365,13 @@ class DQNAgent:
         plt.show()
 
 
-
-    def select_action_LLM(self, obs, env):
+    def select_action_LLM(self, obs):
         """
         Call the LLM and return an action
         """
 
-        ### TO MODIFY ###
-        # For the moment just random
-        prompt = "You are a useful assistant and "
-        for _ in range(self.nb_actions_selected_by_LLM):
-            
-            selected_action = self.llm_model.send()
-            self.LLM_next_selected_actions.append(selected_action)
+        self.LLM_next_selected_actions = self.api_llm.generate_list_of_actions(obs, nb_actions=self.nb_actions_selected_by_LLM)
+
 
         return self.LLM_next_selected_actions.pop(0)
     
