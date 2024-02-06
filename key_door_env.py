@@ -18,7 +18,7 @@ import seaborn as sns
 import numpy as np
 import copy
 
-NB_ROOMS = 5
+NB_ROOMS = 3
 
 SIZE_ONE_BLOCK = 20 # Size of one block in pixels
 FPS = 64
@@ -307,12 +307,15 @@ class KeyDoorsEnv(gym.Env):
 
         # Set keys
         self._keys_location = {}
+        self._doors_location = {}
         for room_number in range(2, self.nb_rooms+1):
             if room_number == 2 and len(np.argwhere(self.map == room_number - 1)) == 0: # In case the first room is only one square ... 
                 self._keys_location[room_number] = self._agent_location
+                self._doors_location[room_number] = np.argwhere(self.map == -room_number)[0]
             else :
                 key_location = random.choice(np.argwhere(self.map == room_number - 1))
                 self._keys_location[room_number] = key_location
+                self._doors_location[room_number] = np.argwhere(self.map == -room_number)[0]
 
         # Set goal
         final_room_number = self.nb_rooms
@@ -395,15 +398,28 @@ class KeyDoorsEnv(gym.Env):
             self.display.blit(pygame.transform.scale(self.screen, self.display.get_rect().size), (0, 0))
             pygame.display.update()
 
+    
+    def captioner(self):
+
+        prompt = "You play an agent which can move up (-1 on the y-axis), down (+1 on the y-axis), left (-1 on the x-axis) or right (+1 on the x-axis) on a 2D grid world. Your goal is to reach the final target.\n" 
+        prompt += "You are currently located at ({}, {}), and the target is at ({}, {}).\n".format(self._agent_location[0], self._agent_location[1], self._target_location[0], self._target_location[1])
+        prompt += "You have multiple doors and keys. Here is the list of the coordinates of every pair of corresponding key and door :\n"
+        for room in self._keys_location.keys():
+            prompt += "Door {} : ({}, {})  -  Key {} : ({}, {})\n".format(room, self._doors_location[room][0], self._doors_location[room][1], room, self._keys_location[room][0], self._keys_location[room][1])
+        prompt += "Finally, the walls are located at the following list of coordinates : {}\n".format(list(zip(*np.where(self.map == 0))))
+        prompt += "Here is the list of keys you have : {}".format([e for e, has in self._has_key.items() if has == 1])
+        
+        return prompt
 
 if __name__ == '__main__':
 
     print("Let's play a game")
-    env = KeyDoorsEnv(14, 14, nb_rooms=NB_ROOMS, render_mode="human", seed = 10)
+    env = KeyDoorsEnv(11, 11, nb_rooms=NB_ROOMS, render_mode="human", seed = 10)
 
     env.reset()
     for i in range(1000):
         env.render()
+        print(env.captioner())
         action = env.get_human_player_move()
         # action = env.action_space.sample()
         obs, reward, done, truncated, info = env.step(action)
