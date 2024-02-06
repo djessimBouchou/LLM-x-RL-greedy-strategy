@@ -18,7 +18,7 @@ import seaborn as sns
 import numpy as np
 import copy
 
-NB_ROOMS = 3
+NB_ROOMS = 2
 
 SIZE_ONE_BLOCK = 20 # Size of one block in pixels
 FPS = 64
@@ -401,12 +401,18 @@ class KeyDoorsEnv(gym.Env):
     
     def captioner(self):
 
-        prompt = "You play an agent which can move up (-1 on the y-axis), down (+1 on the y-axis), left (-1 on the x-axis) or right (+1 on the x-axis) on a 2D grid world. Your goal is to reach the final target.\n" 
-        prompt += "You are currently located at ({}, {}), and the target is at ({}, {}).\n".format(self._agent_location[0], self._agent_location[1], self._target_location[0], self._target_location[1])
-        prompt += "You have multiple doors and keys. Here is the list of the coordinates of every pair of corresponding key and door :\n"
+        prompt = "You play an agent which can move UP (-1 on the y-axis), DOWN (+1 on the y-axis), LEFT (-1 on the x-axis) or RIGHT (+1 on the x-axis) on a 2D grid world generated using PyGame. Your goal is to reach the final target.\n" 
+        prompt += "You are currently located at ({}, {}), and the target is at ({}, {}).\n".format(self._agent_location[0]-1, self._agent_location[1]-1, self._target_location[0]-1, self._target_location[1]-1)
+        prompt += "There are multiple doors and keys. Here is the list of the coordinates of every pair of corresponding key and door :\n"
         for room in self._keys_location.keys():
-            prompt += "Door {} : ({}, {})  -  Key {} : ({}, {})\n".format(room, self._doors_location[room][0], self._doors_location[room][1], room, self._keys_location[room][0], self._keys_location[room][1])
-        prompt += "Finally, the walls are located at the following list of coordinates : {}\n".format(list(zip(*np.where(self.map == 0))))
+            prompt += "Door {} : ({}, {})  -  Key {} : ({}, {})\n".format(room, self._doors_location[room][0]-1, self._doors_location[room][1]-1, room, self._keys_location[room][0]-1, self._keys_location[room][1]-1)
+        prompt += "You need to collect the keys, by just reaching the given location, to then pass the door in order to finally reach the target location.\n"
+        list_walls = list(np.where(self.map == 0))
+        list_walls = [(x-1, y-1) for x, y in zip(*list_walls) if x > 0 and y > 0 and x < self.grid_width-1 and y < self.grid_height-1]
+        prompt += "Finally, there are walls that you cannot pass. The walls are located at the following list of coordinates :\n"
+        for wall_position in list_walls:
+            prompt += "- ({}, {})\n".format(wall_position[0], wall_position[1])
+        prompt += "You can never be on those positions during the game.\n"
         prompt += "Here is the list of keys you have : {}".format([e for e, has in self._has_key.items() if has == 1])
         
         return prompt
@@ -414,7 +420,7 @@ class KeyDoorsEnv(gym.Env):
 if __name__ == '__main__':
 
     print("Let's play a game")
-    env = KeyDoorsEnv(11, 11, nb_rooms=NB_ROOMS, render_mode="human", seed = 10)
+    env = KeyDoorsEnv(8, 8, nb_rooms=NB_ROOMS, render_mode="human", seed = 42)
 
     env.reset()
     for i in range(1000):
