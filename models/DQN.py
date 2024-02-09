@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from IPython.display import clear_output
-from models.API_Gemini import API_Session
+from models.API_Gemini import API_Gemini
 
 
 
