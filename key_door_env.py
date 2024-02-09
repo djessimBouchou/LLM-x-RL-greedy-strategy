@@ -20,7 +20,7 @@ import copy
 
 NB_ROOMS = 2
 
-SIZE_ONE_BLOCK = 20 # Size of one block in pixels
+SIZE_ONE_BLOCK = 40 # Size of one block in pixels
 FPS = 64
 
 COLOR_SET = sns.color_palette(None, NB_ROOMS).as_hex()
@@ -176,7 +176,7 @@ def create_doors(map, adjancy_list, nb_rooms):
 
     rooms_explored = [1]
 
-    while len(rooms_explored) != nb_rooms:
+    while len(rooms_explo14red) != nb_rooms:
 
         possible_next_rooms = []
         for room in rooms_explored:
@@ -401,18 +401,31 @@ class KeyDoorsEnv(gym.Env):
     
     def captioner(self):
 
-        prompt = "You play an agent which can move UP (-1 on the y-axis), DOWN (+1 on the y-axis), LEFT (-1 on the x-axis) or RIGHT (+1 on the x-axis) on a 2D grid world generated using PyGame. Your goal is to reach the final target.\n" 
+        # prompt = "You play an agent which can move UP (-1 on the y-axis), DOWN (+1 on the y-axis), LEFT (-1 on the x-axis) or RIGHT (+1 on the x-axis) on a 2D grid world generated using PyGame. Your goal is to reach the final target.\n" 
+        # prompt += "You are currently located at ({}, {}), and the target is at ({}, {}).\n".format(self._agent_location[0]-1, self._agent_location[1]-1, self._target_location[0]-1, self._target_location[1]-1)
+        # prompt += "There are multiple doors and keys. Here is the list of the coord14n, to then pass the door in order to finally reach the target location.\n"
+        # list_walls = list(np.where(self.map == 0))
+        # list_walls = [(x-1, y-1) for x, y in zip(*list_walls) if x > 0 and y > 0 and x < self.grid_width-1 and y < self.grid_height-1]
+        # prompt += "Finally, there are walls that you cannot pass. The walls are located at the following list of coordinates :\n"
+        # for wall_position in list_walls:
+        #     prompt += "- ({}, {})\n".format(wall_position[0], wall_position[1])
+        # prompt += "You can never be on those positions during the game.\n"
+        # prompt += "Here is the list of keys you have : {}".format([e for e, has in self._has_key.items() if has == 1])
+
+        prompt = "You are a useful assistant that will help me to win a game. I will give you the position of the player, the position of walls, the position of keys and the position of doors.\n" 
+        prompt += "Your goal is to reach a target by passing through doors with keys. The player has 4 possible actions : UP (-1 on the y-axis), DOWN (+1 on the y-axis), LEFT (-1 on the x-axis) or RIGHT (+1 on the x-axis)."
+        prompt += "For example : if the player is located at (1, 3) and takes the action UP, the player is now located at (1, 2) because it removes 1 to the y-axis. \n"
+        prompt += "You cannot be at a position where there is a wall. For example : if the player is located at (3, 4) and there is a wall at (4, 4), the player cannot take the action DOWN because the player cannot reach the location (4, 4) there is a wall.\n"
+        prompt += "I will give you the position of all the walls. \n" 
+        prompt += "To open the door number i you need to reach the key number i first. i is a integer. For example : you cannot reach the door 3 if you have not reach the key 3 first.\n"
+        prompt += "Before reaching the target  you should pass through all the keys and the doors."
         prompt += "You are currently located at ({}, {}), and the target is at ({}, {}).\n".format(self._agent_location[0]-1, self._agent_location[1]-1, self._target_location[0]-1, self._target_location[1]-1)
-        prompt += "There are multiple doors and keys. Here is the list of the coordinates of every pair of corresponding key and door :\n"
-        for room in self._keys_location.keys():
-            prompt += "Door {} : ({}, {})  -  Key {} : ({}, {})\n".format(room, self._doors_location[room][0]-1, self._doors_location[room][1]-1, room, self._keys_location[room][0]-1, self._keys_location[room][1]-1)
-        prompt += "You need to collect the keys, by just reaching the given location, to then pass the door in order to finally reach the target location.\n"
         list_walls = list(np.where(self.map == 0))
         list_walls = [(x-1, y-1) for x, y in zip(*list_walls) if x > 0 and y > 0 and x < self.grid_width-1 and y < self.grid_height-1]
-        prompt += "Finally, there are walls that you cannot pass. The walls are located at the following list of coordinates :\n"
+        prompt += "The position of the walls are given below :\n"
         for wall_position in list_walls:
             prompt += "- ({}, {})\n".format(wall_position[0], wall_position[1])
-        prompt += "You can never be on those positions during the game.\n"
+
         prompt += "Here is the list of keys you have : {}".format([e for e, has in self._has_key.items() if has == 1])
         
         return prompt
