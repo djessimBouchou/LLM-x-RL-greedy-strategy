@@ -9,8 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from IPython.display import clear_output
-from API_Gemini import API_Gemini
-
+from .API import GPTSession
 
 
 class ReplayBuffer:
@@ -200,7 +199,7 @@ class DQNAgent:
         self.is_test = False
 
         # API LLM
-        self.api_llm = API_Gemini(key_path = "key.json", dict_action = self.dict_action, description_game = self.description_game)
+        self.api_llm = GPTSession(key_path = api_key_path)
 
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
@@ -208,7 +207,7 @@ class DQNAgent:
         if len(self.LLM_next_selected_actions) > 0:
             selected_action = self.LLM_next_selected_actions.pop(0)
         elif self.LLM_epsilon > np.random.random():
-            selected_action = self.select_action_LLM(state, self.env)
+            selected_action = self.select_action_LLM()
         else:
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
@@ -365,22 +364,14 @@ class DQNAgent:
         plt.show()
 
 
-    def select_action_LLM(self, obs):
+    def select_action_LLM(self):
         """
         Call the LLM and return an action
         """
 
-        self.LLM_next_selected_actions = self.api_llm.generate_list_of_actions(obs, nb_actions=self.nb_actions_selected_by_LLM)
+        description_obs = self.env.captioner()
+        self.LLM_next_selected_actions = self.api_llm.generate_list_of_actions(description_obs, nb_actions=self.nb_actions_selected_by_LLM)
 
 
         return self.LLM_next_selected_actions.pop(0)
     
-
-if __name__ == "__main__":
-
-    env = gym.make("CarRacing-v2", max_episode_steps=200, render_mode="rgb_array", continuous = False)
-    agent = DQNAgent(network_type="Cnn", env = env, memory_size=100000, batch_size=32, target_update=100, LLM_epsilon_decay = 1/2000, seed = 42, max_LLM_epsilon=0.1)
-    obs, _ = env.reset()
-    for _ in range(10):
-        action = agent.select_action(obs)
-        print(action)

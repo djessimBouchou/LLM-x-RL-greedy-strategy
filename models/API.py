@@ -80,6 +80,14 @@ class GPTSession():
         
         self.client = OpenAI(api_key=api_key)
 
+        self.action_to_value = {
+            "up": 0,
+            "right": 1,
+            "down": 2,
+            "left": 3
+        }
+
+
     def call(self, prompt, model_name = "gpt-4-turbo-preview"):
         resp = self.client.chat.completions.create(
             model=model_name,
@@ -90,3 +98,29 @@ class GPTSession():
         return resp.choices[0].message.content
 
 
+    def generate_list_of_actions(self, description, nb_actions = 10):
+
+        list_possible_actions = list(self.action_to_value.keys())
+        prompt = description
+
+        message = "\n The possible actions are the following : " + ", ".join(list_possible_actions) + "."
+        message += "\n Can you give me {} actions to realize, in order to get closer to the goal?".format(nb_actions)
+
+        prompt += message
+
+        response = self.call(prompt)
+
+        print(response)
+
+        list_actions = response.split()
+        list_actions = [action.strip(',') for action in list_actions if action.strip(', ') in list_possible_actions]
+        list_actions = [self.action_to_value[action] for action in list_actions]
+
+        return list_actions
+    
+
+
+if __name__ == "__main__":
+    api = GPTSession(key_path = "key.json")
+    
+    print("OK")

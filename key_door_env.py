@@ -412,18 +412,19 @@ class KeyDoorsEnv(gym.Env):
         # prompt += "You can never be on those positions during the game.\n"
         # prompt += "Here is the list of keys you have : {}".format([e for e, has in self._has_key.items() if has == 1])
 
-        prompt = "You are a useful assistant that will help me to win a game. I will give you the position of the player, the position of walls, the position of keys and the position of doors in the following format :(first coordinate, second coordinate) - where first coordinate and second coordinate are integers.\n" 
-        prompt += "Your goal is to reach a target by reaching doors with keys. The player has 4 possible actions : UP (adds 1 on the second coordinate of the player), DOWN (removes 1 on the second coordinate of the player), LEFT (removes 1 on the first coordinate of the player) or RIGHT (add 1 on the first coordinate of the player)."
-        prompt += "For example : if the player is located at (1, 3) and takes the action DOWN, the player is now located at (1, 2) because it removes 1 to the second coordinate of the player. \n"
-        prompt += "For example : if the player is located at (8, 2) and takes the action LEFT, the player is now located at (7, 2) because it removes 1 to the first coordinate of the player. \n"
+        prompt = " You play an agent moving on a 2D grid world generated using PyGame. Your goal is to reach the final target."
+        prompt += "You are a useful assistant that will help me to win a game. I will give you the position of the player, the position of walls, the position of keys and the position of doors in the following format :(first coordinate, second coordinate) - where first coordinate and second coordinate are integers.\n" 
+        prompt += "Your goal is to reach a target by reaching doors with keys. The player has 4 possible actions : UP (removes 1 on the second coordinate of the player), DOWN (adds 1 on the second coordinate of the player), LEFT (removes 1 on the first coordinate of the player) or RIGHT (add 1 on the first coordinate of the player).\n"
+        prompt += "For example : if the player is located at (1, 3) and takes the action DOWN, the player is now located at (1, 4) because it adds 1 to the second coordinate of the player. \n"
+        prompt += "For example : if the player is located at (8, 2) and takes the action LEFT, the player is now located at (7, 2) because it removes 1 form the first coordinate of the player. \n"
         prompt += "For example : if the player is located at (5, 6) and takes the action RIGHT, the player is now located at (6, 6) because it adds 1 to the first coordinate of the player. \n"
-        prompt += "For example : if the player is located at (5, 1) and takes the action UP, the player is now located at (5, 2) because it adds 1 to the second coordinate of the player. \n"
-
+        prompt += "For example : if the player is located at (5, 1) and takes the action UP, the player is now located at (5, 0) because it removes 1 from the second coordinate of the player. \n"
         prompt += "You cannot be at a position where there is a wall. For example : if the player is located at (3, 4) and there is a wall at (4, 4), the player cannot take the action UP because the player cannot reach the location (4, 4) there is a wall.\n"
         prompt += "I will give you the position of all the walls. \n" 
         prompt += "To open the door number i you need to reach the key number i first. i is a integer. For example : you cannot reach the door 3 if you have not reach the key 3 first.\n"
+        prompt += "Thus, to reach the target, you must collect Key 1, to pass Door 1, then Key 2, then Door 2, etc.\n"
         prompt += "Before reaching the target you should reach all the keys and the doors.\n"
-        prompt += "For example : if the player is located at (4, 2) and the key 2 is at the location (4, 3), the player should do the action RIGHT to be located at (4, 3) and therefore reach the key 2."
+        prompt += "For example : if the player is located at (4, 2) and the key 2 is at the location (4, 3), the player should do the action RIGHT to be located at (4, 3) and therefore reach the key 2.\n"
         prompt += "You are currently located at ({}, {}), and the target is at ({}, {}).\n".format(self._agent_location[0]-1, self._agent_location[1]-1, self._target_location[0]-1, self._target_location[1]-1)
         list_walls = list(np.where(self.map == 0))
         list_walls = [(x-1, y-1) for x, y in zip(*list_walls) if x > 0 and y > 0 and x < self.grid_width-1 and y < self.grid_height-1]
@@ -436,7 +437,11 @@ class KeyDoorsEnv(gym.Env):
         for room in self._keys_location.keys():
             prompt += "Door {} : ({}, {})  -  Key {} : ({}, {})\n".format(room - 1, self._doors_location[room][0]-1, self._doors_location[room][1]-1, room - 1, self._keys_location[room][0]-1, self._keys_location[room][1]-1)
 
-        prompt += "Here is the list of keys you have : {}\n".format([e for e, has in self._has_key.items() if has == 1])
+        list_keys = [e-1 for e, has in self._has_key.items() if has == 1]
+        if len(list_keys) == 0:
+            prompt += "You do not have any key for the moment.\n"
+        else :
+            prompt += "Here is the list of keys you have : {}\n".format(list_keys)
 
         prompt += "Give me the list of action the player should do to collect all the keys, reach all the doors and reach the target without reaching the walls. Your answer should be in the following format : action1 (new_first_coordinate, new_second_coordinate) - action2 (new_first_coordinate, new_second_coordinate) - ..." 
         
