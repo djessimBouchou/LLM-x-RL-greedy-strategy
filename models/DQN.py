@@ -75,7 +75,7 @@ class CnnNetwork(nn.Module):
         """Initialization."""
         super(CnnNetwork, self).__init__()
 
-        dim_flatter = 33856 # To change and calculate automatically
+        dim_flatter = 64 # To change and calculate automatically
 
         self.layers = nn.Sequential(
             nn.Conv2d(in_channels, 16, kernel_size=(2, 2), stride = 1), 
