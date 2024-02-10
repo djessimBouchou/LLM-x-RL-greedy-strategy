@@ -1,5 +1,7 @@
 key.json
 *test*
+models/rainbow_DQN.py
+models/segment_tree.py
 
 # Environments
 .llm_project
