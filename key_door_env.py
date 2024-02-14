@@ -411,6 +411,8 @@ class KeyDoorsEnv(gym.Env):
             for i in range(self.grid_height):
                 if ((i, j) == self._agent_location).all():
                     text_obs += "O|"
+                elif ((i, j) == self._target_location).all():
+                    text_obs += "G|"
                 elif np.array([np.array_equal(np.array([i, j]), target_array) for target_array in self._keys_location.values()]).any():
                     key = [key for key, value in self._keys_location.items() if np.array_equal(value, (i, j))][0]
                     if not self._has_key[key]:
