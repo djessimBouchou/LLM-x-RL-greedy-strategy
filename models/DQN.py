@@ -1,3 +1,5 @@
+# Initial source : https://github.com/Curt-Park/rainbow-is-all-you-need/blob/master/01.dqn.ipynb 
+
 import os
 from typing import Dict, List, Tuple
 
@@ -121,10 +123,11 @@ class DQNAgent:
         self, 
         network_type: str,
         env: gym.Env,
+        llm,
+        tokenizer,
         memory_size: int,
         batch_size: int,
         target_update: int,
-        api_key_path: str,
         LLM_epsilon_decay: float = 0.9,
         seed: int = 42,
         max_LLM_epsilon: float = 1.0,
@@ -198,8 +201,12 @@ class DQNAgent:
         # mode: train / test
         self.is_test = False
 
-        # API LLM
-        self.api_llm = GPTSession(key_path = api_key_path)
+        # LLM
+        self.tokenizer = tokenizer
+        self.llm = llm
+        self.episodes_for_llm = []
+        self.rewards_for_llm = []
+
 
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
@@ -207,7 +214,7 @@ class DQNAgent:
         if len(self.LLM_next_selected_actions) > 0:
             selected_action = self.LLM_next_selected_actions.pop(0)
         elif self.LLM_epsilon > np.random.random():
-            selected_action = self.select_action_LLM()
+            selected_action = self.select_action_LLM(state)
         else:
             selected_action = self.dqn(
                 torch.FloatTensor(state).to(self.device)
@@ -252,11 +259,18 @@ class DQNAgent:
         losses = []
         scores = []
         score = 0
+        desired_reward = np.max(self.rewards_for_llm) + 20 + np.int32(np.random.uniform() * 10)
+        self.prompt_llm = f"{desired_reward}:"
 
         for frame_idx in range(1, num_frames + 1):
-            action = self.select_action(state)
-            next_state, reward, done = self.step(action)
+            self.prompt_llm += f"{self.env.state_to_str(state)},"
+            num_tokens = len(self.tokenizer.encode(self.prompt_llm))
 
+            action = self.select_action(state)
+            self.prompt_llm += f"{self.env.act_to_str(action)},"
+            episode_for_llm.append((state, action))
+            next_state, reward, done = self.step(action)
+            
             state = next_state
             score += reward
 
@@ -264,6 +278,11 @@ class DQNAgent:
             if done:
                 state, _ = self.env.reset(seed=self.seed)
                 scores.append(score)
+                self.rewards_for_llm.append(score)
+                self.episodes_for_llm.append(episode_for_llm)
+                episode_for_llm = []
+                desired_reward = np.max(self.rewards_for_llm) + 20 + np.int32(np.random.uniform() * 10)
+                self.prompt_llm = f"{desired_reward}:"
                 score = 0
 
             # if training is ready
@@ -364,13 +383,48 @@ class DQNAgent:
         plt.show()
 
 
-    def select_action_LLM(self, obs, nb_actions_selected = 10, prompt = ""):
+    def select_action_LLM(self, state, nb_actions_selected = 10, max_context = 1020):
         """
         Call the LLM and return an action
         """
         
-        self.LLM_next_selected_actions = self.api_llm.generate_list_of_actions(obs, nb_actions=nb_actions_selected)
+        self.LLM_next_selected_actions = []
 
+        # Create prompt for LLM
+        prompt = self.prompt_llm
+        num_tokens = len(self.tokenizer.encode(prompt))
+
+        # Build context of episodes sorted by ascending rewards.
+        context = ""
+        for i in np.argsort(self.rewards_for_llm)[::-1]:
+            if num_tokens + 10 > max_context:  # Each episode should have at least 10 tokens.
+                break
+            episode, reward = self.episodes_for_llm[i], self.rewards_for_llm[i]
+            size = min(len(episode), (max_context - num_tokens) // 5)
+            text = f"{reward}:" + ",".join([f"{self.env.state_to_str(s)},{self.env.act_to_str(a)}" for s, a in episode[:size]])
+            num_tokens += 2 + size * 5   # Manual math here to count tokens. Calling the tokenizer too much can get slow.
+            context = f"{text}\n{context}"
+
+        input_LLM = context + prompt   
+
+        # Pass request through the LLM
+        encoded = self.tokenizer(input_LLM, return_tensors="pt").to(self.device)
+        output = self.llm.generate(**encoded, max_new_tokens=len(encoded[0]) + 100, num_return_sequences=1, pad_token_id=self.tokenizer.eos_token_id)
+        output = output[0, len(encoded[0]):]
+        output= self.tokenizer.batch_decode(output, skip_special_tokens=True)[0]
+
+        # Convert to list of actions
+        output = output.split(',')
+        output = [e.strip() for e in output]
+        
+        self.LLM_next_selected_actions = []
+        num_actions = 0
+        i = 0
+        while num_actions < nb_actions_selected and i < len(output):
+            if output[i] == "1" or output[i] == "2":
+                self.LLM_next_selected_actions.append(self.env.str_to_act(output[i]))
+                num_actions += 1
+            i += 1
 
         return self.LLM_next_selected_actions.pop(0)
     
