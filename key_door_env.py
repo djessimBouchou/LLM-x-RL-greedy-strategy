@@ -403,28 +403,28 @@ class KeyDoorsEnv(gym.Env):
         Return the observation of the current state as a string representation of the 2D grid.
         """
 
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
         # Prompt final
         text_obs = ""
         for j in range(self.grid_width):
-            text_obs += "|"
             for i in range(self.grid_height):
                 if ((i, j) == self._agent_location).all():
-                    text_obs += "O|"
+                    text_obs += "O"
                 elif ((i, j) == self._target_location).all():
-                    text_obs += "G|"
+                    text_obs += "G"
                 elif np.array([np.array_equal(np.array([i, j]), target_array) for target_array in self._keys_location.values()]).any():
                     key = [key for key, value in self._keys_location.items() if np.array_equal(value, (i, j))][0]
                     if not self._has_key[key]:
-                        text_obs += "K{}|".format(key)
+                        text_obs += "{}".format(key - 1)
                     else :
-                        text_obs += ".|"
+                        text_obs += "."
                 elif self.map[i, j] == 0:
-                    text_obs += "X|"
+                    text_obs += "X"
                 elif self.map[i, j] > 0:
-                    text_obs += ".|"
+                    text_obs += "."
                 elif self.map[i, j] < -1:
-                    text_obs += "D{}|".format(-self.map[i, j])
+                    text_obs += "{}".format(-self.map[i, j] - 1)
             text_obs += "\n"
 
         return text_obs
@@ -480,7 +480,7 @@ class KeyDoorsEnv(gym.Env):
 if __name__ == '__main__':
 
     print("Let's play a game")
-    env = KeyDoorsEnv(12, 12, nb_rooms=NB_ROOMS, render_mode="human", seed = 42)
+    env = KeyDoorsEnv(12, 12, nb_rooms=NB_ROOMS, render_mode="human", seed = 12)
 
     env.reset()
     for i in range(1000):

@@ -364,13 +364,12 @@ class DQNAgent:
         plt.show()
 
 
-    def select_action_LLM(self):
+    def select_action_LLM(self, obs, nb_actions_selected = 10, prompt = ""):
         """
         Call the LLM and return an action
         """
-
-        description_obs = self.env.captioner()
-        self.LLM_next_selected_actions = self.api_llm.generate_list_of_actions(description_obs, nb_actions=self.nb_actions_selected_by_LLM)
+        
+        self.LLM_next_selected_actions = self.api_llm.generate_list_of_actions(obs, nb_actions=nb_actions_selected)
 
 
         return self.LLM_next_selected_actions.pop(0)
