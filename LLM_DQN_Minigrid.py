@@ -11,12 +11,15 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def description_game(captionner, obs, num_actions):
 
-    description = "You play an agent on a 2-dimensional grid world of size {}x{}.\nHere is a description of what is on the grid.\n\n".format(obs["image"].shape[0], obs["image"].shape[1])
+    description = "You play an agent on a 2-dimensional rectangular grid world of size {}x{}, observed with a top-down point of view.\n".format(obs["image"].shape[0], obs["image"].shape[1])
+    description += "The four corners are : North-East (1, 1), North-West (1, {}), South-East ({}, 1) and South-West ({}, {}).".format(obs["image"].shape[0], obs["image"].shape[1], obs["image"].shape[0], obs["image"].shape[1])
+    description += "Here is a description of what is on the grid.\n\n"
     caption = captionner.caption(obs)
+    possible_actions = "The possible actions are : Turn 90 deg left, Turn 90 deg right and Move forward.\n\n"
     final_query = "Produce a reasoning to understand the different steps to reach the final goal. \n"
-    final_query += "After that, output clearly the {} next actions to take. An action can be (go up, go down, go right, go left)".format(num_actions)
+    final_query += "Finally produce a clear list of {} next actions to take from the described scenario, starting with ACTIONS TO TAKE : + insert list of actions.".format(num_actions)
 
-    return description + caption + final_query
+    return description + caption + possible_actions + final_query
 
 captionner = CaptionnerGT()
 
@@ -24,7 +27,7 @@ env = EmptyEnv(size = 20)
 env = FullyObsWrapper(env)
 
 obs, _ = env.reset()
-prompt = description_game(captionner, obs)
+prompt = description_game(captionner, obs, num_actions=20)
 
 device = "cuda" # the device to load the model onto
 

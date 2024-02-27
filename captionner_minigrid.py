@@ -25,6 +25,11 @@ class CaptionnerGT():
                     res += f"There is a {self.idx_to_object[image[i, j][0]]} at location ({i}, {j})\n"
 
         res += "All the other spaces are empty.\n\n"
+
+        oriention_agent = obs["direction"]
+        idx_to_direction = {0:"west",1:"south",2:"east",3:"north"}
+        
+        res += "The agent is currently facing the {}.\n\n".format(idx_to_direction[oriention_agent])
         return res
 
 
