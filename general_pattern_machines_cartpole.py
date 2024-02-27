@@ -1,33 +1,34 @@
-### TO CONTINUE ###
-
 from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 
+import re
 
 device = "cuda" # the device to load the model onto
 
 model = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2").to(device)
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
 
-translation_generation_config = GenerationConfig(
-    num_beams=4,
-    early_stopping=True,
-    decoder_start_token_id=0,
-    eos_token_id=model.config.eos_token_id,
-    pad_token=model.config.pad_token_id,
-)
+#translation_generation_config = GenerationConfig(
+#    num_beams=4,
+#    early_stopping=True,
+#    decoder_start_token_id=0,
+#    eos_token_id=model.config.eos_token_id,
+#    pad_token=model.config.pad_token_id,
+#)
 
-translation_generation_config.save_pretrained("/tmp", "translation_generation_config.json")
-generation_config = GenerationConfig.from_pretrained("/tmp", "translation_generation_config.json")
+#translation_generation_config.save_pretrained("/tmp", "translation_generation_config.json")
+#generation_config = GenerationConfig.from_pretrained("/tmp", "translation_generation_config.json")
 
 def LLM(prompt, max_tokens=256, stop=None, temperature=0.0, device = "cuda"):
 
     encoded = tokenizer(prompt, return_tensors="pt").to(device)
-    output = model.generate(**encoded, max_new_tokens=max_tokens, generation_config=generation_config)
-    output= tokenizer.batch_decode(output, skip_special_tokens=True)[0]
+    output = model.generate(**encoded, max_length=len(encoded[0]) + max_tokens, num_return_sequences=1, pad_token_id=tokenizer.eos_token_id)
+    output = output[0, len(encoded[0]):]
+    output= tokenizer.decode(output, skip_special_tokens=True)
+    print("Output : " + output)
     return output
 
 class CartPoleEnv:
@@ -120,12 +121,14 @@ while len(episodes) < max_episodes:
 
     # LLM inference.
     pred = LLM(context + prompt, max_tokens=4, stop=[",", "\n"], temperature=temperature)
+    pred = re.sub(r"[, ]", "", pred)
+    print(pred)
 
     # If predicted action is invalid, sample random action.
     # Alternatively, one can sample the LLM from only the set of valid actions
     # by using a logit bias. This is the approach we take in our experiments.
     try:
-      act = env.str_to_act(pred.strip(","))
+      act = env.str_to_act(pred.strip())
     except:
       act = -1
     if act not in [0, 1]:
