@@ -787,3 +787,19 @@ class MiniGridEnv(gym.Env):
     def close(self):
         if self.window:
             pygame.quit()
+
+    def norm_state(self, state = None):
+        return self.agent_pos
+    
+    def random_act(self):
+        return self.env.action_space.sample()
+    
+    def state_to_str(self, state):
+        return f" ({state[0]}, {state[1]})"
+
+    def act_to_str(self, act):
+        # LLMs bias on 0 so make the actions 1 and 2 instead.
+        return f" {act + 1}"
+
+    def str_to_act(self, str):
+        return int(str) - 1
